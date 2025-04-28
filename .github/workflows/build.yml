@@ -30,7 +30,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: hiero-client-sdk-linux-medium
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
@@ -61,14 +61,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
         with:
-          cache-read-only: false
-          gradle-home-cache-strategy: none # Disable remote cache due to 403 error
+          cache-disabled: true # Disable remote cache due to 403 error
 
       - name: Build SDK & Javadoc
         id: gradle-build
-        env:
-          JAVA_HOME: /home/runner/_work/_tool/Java_Temurin-Hotspot_jdk/17.0.13-11/x64
-        run: ./gradlew assemble -Porg.gradle.java.home=$JAVA_HOME
+        run: ./gradlew assemble
 
       - name: Setup Snyk
         env:
@@ -166,7 +163,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
 
       - name: Setup NodeJS
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -187,7 +184,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
         with:
-          gradle-home-cache-strategy: none # Disable remote cache due to 403 error
+          cache-disabled: true # Disable remote cache due to 403 error
 
       - name: Prepare Hiero Solo
         id: solo
@@ -207,14 +204,10 @@ jobs:
           curl -s http://localhost:5551/api/v1/network/nodes || echo "Mirror node not accessible"
 
       - name: Build SDK
-        env:
-          JAVA_HOME: /home/runner/_work/_tool/Java_Temurin-Hotspot_jdk/17.0.13-11/x64
-        run: ./gradlew assemble -Porg.gradle.java.home=$JAVA_HOME
+        run: ./gradlew assemble
 
       - name: Code Quality Checks
-        env:
-          JAVA_HOME: /home/runner/_work/_tool/Java_Temurin-Hotspot_jdk/17.0.13-11/x64
-        run: ./gradlew qualityCheck :examples:qualityCheck --continue --rerun-tasks -Porg.gradle.java.home=$JAVA_HOME
+        run: ./gradlew qualityCheck :examples:qualityCheck --continue --rerun-tasks
 
       - name: Run Unit and Integration Tests
         env:
@@ -224,7 +217,7 @@ jobs:
           HEDERA_NODE_ADDRESS: localhost:50211 # Default Solo node address
           HEDERA_MIRROR_NODE_ADDRESS: localhost:5551 # Default mirror node address
         run: |
-          ./gradlew -POPERATOR_ID=$OPERATOR_ID -POPERATOR_KEY=$OPERATOR_KEY -PHEDERA_NETWORK=$HEDERA_NETWORK -PHEDERA_NODE_ADDRESS=$HEDERA_NODE_ADDRESS -PHEDERA_MIRROR_NODE_ADDRESS=$HEDERA_MIRROR_NODE_ADDRESS :aggregation:testCodeCoverageReport -Porg.gradle.java.home=$JAVA_HOME
+          ./gradlew -POPERATOR_ID=$OPERATOR_ID -POPERATOR_KEY=$OPERATOR_KEY -PHEDERA_NETWORK=$HEDERA_NETWORK -PHEDERA_NODE_ADDRESS=$HEDERA_NODE_ADDRESS -PHEDERA_MIRROR_NODE_ADDRESS=$HEDERA_MIRROR_NODE_ADDRESS :aggregation:testCodeCoverageReport
 
       - name: Upload coverage to Codecov
         if: ${{ github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
@@ -268,7 +261,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
         with:
-          gradle-home-cache-strategy: none # Disable remote cache due to 403 error
+          cache-disabled: true # Disable remote cache due to 403 error
 
       - name: Prepare Hiero Solo
         id: solo
@@ -288,14 +281,10 @@ jobs:
           curl -s http://localhost:5551/api/v1/network/nodes || echo "Mirror node not accessible"
 
       - name: Build SDK
-        env:
-          JAVA_HOME: /home/runner/_work/_tool/Java_Temurin-Hotspot_jdk/17.0.13-11/x64
-        run: ./gradlew assemble -Porg.gradle.java.home=$JAVA_HOME
+        run: ./gradlew assemble
 
       - name: Build Android Example
-        env:
-          JAVA_HOME: /home/runner/_work/_tool/Java_Temurin-Hotspot_jdk/17.0.13-11/x64
-        run: ./gradlew -p example-android assemble -Porg.gradle.java.home=$JAVA_HOME
+        run: ./gradlew -p example-android assemble
 
       - name: Prepare .env for Examples
         run: |
@@ -312,7 +301,7 @@ jobs:
           HEDERA_NETWORK: solo
           HEDERA_NODE_ADDRESS: localhost:50211
           HEDERA_MIRROR_NODE_ADDRESS: localhost:5551
-        run: ./gradlew :examples:runAllExamples -Porg.gradle.java.home=$JAVA_HOME
+        run: ./gradlew :examples:runAllExamples
 
   test-tck:
     name: TCK Tests
@@ -349,7 +338,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
         with:
-          gradle-home-cache-strategy: none # Disable remote cache due to 403 error
+          cache-disabled: true # Disable remote cache due to 403 error
 
       - name: Prepare Hiero Solo
         id: solo
@@ -369,9 +358,7 @@ jobs:
           curl -s http://localhost:5551/api/v1/network/nodes || echo "Mirror node not accessible"
 
       - name: Build TCK
-        env:
-          JAVA_HOME: /home/runner/_work/_tool/Java_Temurin-Hotspot_jdk/17.0.13-11/x64
-        run: ./gradlew assemble -Porg.gradle.java.home=$JAVA_HOME
+        run: ./grad Wlew assemble
 
       - name: Run TCK Unit Tests
         env:
@@ -380,4 +367,5 @@ jobs:
           HEDERA_NETWORK: solo
           HEDERA_NODE_ADDRESS: localhost:50211
           HEDERA_MIRROR_NODE_ADDRESS: localhost:5551
-        run: ./gradlew -POPERATOR_ID=$OPERATOR_ID -POPERATOR_KEY=$OPERATOR_KEY -PHEDERA_NETWORK=$HEDERA_NETWORK -PHEDERA_NODE_ADDRESS=$HEDERA_NODE_ADDRESS -PHEDERA_MIRROR_NODE_ADDRESS=$HEDERA_MIRROR_NODE_ADDRESS :tck:test -Porg.gradle.java.home=$JAVA_HOME
+        run: ./gradlew -POPERATOR_ID=$OPERATOR_ID -POPERATOR_KEY=$OPERATOR_KEY -PHEDERA_NETWORK=$HEDERA_NETWORK -PHEDERA_NODE_ADDRESS=$HEDERA_NODE_ADDRESS -PHEDERA_MIRROR_NODE_ADDRESS=$HEDERA_MIRROR_NODE_ADDRESS :tck:test
+
