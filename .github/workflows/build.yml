@@ -30,10 +30,10 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: hiero-client-sdk-linux-medium
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: audit
 
@@ -53,15 +53,10 @@ jobs:
           distribution: temurin
           java-version: "17.0.13"
 
-      - name: Debug Java Version
-        run: |
-          echo "JAVA_HOME: $JAVA_HOME"
-          java -version
-
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
+        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
         with:
-          cache-disabled: true # Disable remote cache due to 403 error
+          cache-read-only: false
 
       - name: Build SDK & Javadoc
         id: gradle-build
@@ -94,7 +89,7 @@ jobs:
             ) &&
             !cancelled()
           }}
-        run: ${CG_EXEC} snyk test --all-projects --severity-threshold=high --policy-path=.snyk --json-file-output=snyk-test.json --org=hiero-client-sdks
+        run: ${CG_EXEC} snyk test --all-projects '--configuration-matching=^(?!_internal-).*' --severity-threshold=high --policy-path=.snyk --json-file-output=snyk-test.json --org=hiero-client-sdks
 
       - name: Snyk Code
         id: snyk-code
@@ -156,7 +151,7 @@ jobs:
       - build
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: audit
 
@@ -176,32 +171,15 @@ jobs:
           distribution: temurin
           java-version: "17.0.13"
 
-      - name: Debug Java Version
-        run: |
-          echo "JAVA_HOME: $JAVA_HOME"
-          java -version
-
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
-        with:
-          cache-disabled: true # Disable remote cache due to 403 error
+        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
 
       - name: Prepare Hiero Solo
         id: solo
-        uses: hiero-ledger/hiero-solo-action@35efe2334bffb73298716402a5c688321ec29260 # v0.6
+        uses: hiero-ledger/hiero-solo-action@71219540ac7f578e6ea4fc3c17575c0295e56163 # v0.9
         with:
           installMirrorNode: true
-
-      - name: Debug Hiero Solo Outputs
-        run: |
-          echo "Solo Outputs:"
-          echo "accountId: ${{ steps.solo.outputs.accountId }}"
-          echo "privateKey: ${{ steps.solo.outputs.privateKey }}"
-          echo "publicKey: ${{ steps.solo.outputs.publicKey }}"
-          # Check if node and mirror node are running
-          echo "Checking node status..."
-          netstat -tuln | grep 50211 || echo "No process listening on port 50211"
-          curl -s http://localhost:5551/api/v1/network/nodes || echo "Mirror node not accessible"
+          hieroVersion: v0.62.3
 
       - name: Build SDK
         run: ./gradlew assemble
@@ -211,19 +189,20 @@ jobs:
 
       - name: Run Unit and Integration Tests
         env:
-          OPERATOR_ID: ${{ steps.solo.outputs.accountId }}
-          OPERATOR_KEY: ${{ steps.solo.outputs.privateKey }}
-          HEDERA_NETWORK: solo
-          HEDERA_NODE_ADDRESS: localhost:50211 # Default Solo node address
-          HEDERA_MIRROR_NODE_ADDRESS: localhost:5551 # Default mirror node address
+          OPERATOR_KEY: "0xa608e2130a0a3cb34f86e757303c862bee353d9ab77ba4387ec084f881d420d4"
+          OPERATOR_ID: "0.0.1022"
+          HEDERA_NETWORK: "localhost"
         run: |
-          ./gradlew -POPERATOR_ID=$OPERATOR_ID -POPERATOR_KEY=$OPERATOR_KEY -PHEDERA_NETWORK=$HEDERA_NETWORK -PHEDERA_NODE_ADDRESS=$HEDERA_NODE_ADDRESS -PHEDERA_MIRROR_NODE_ADDRESS=$HEDERA_MIRROR_NODE_ADDRESS :aggregation:testCodeCoverageReport
+          ./gradlew -POPERATOR_ID=$OPERATOR_ID -POPERATOR_KEY=$OPERATOR_KEY -PHEDERA_NETWORK=$HEDERA_NETWORK :aggregation:testCodeCoverageReport
 
       - name: Upload coverage to Codecov
         if: ${{ github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
         uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.2
         with:
           files: gradle/aggregation/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+
+      - name: Stop the local node
+        run: npx @hashgraph/hedera-local stop
 
   run-examples:
     name: Run Examples
@@ -232,7 +211,7 @@ jobs:
       - build
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: audit
 
@@ -250,35 +229,18 @@ jobs:
           distribution: temurin
           java-version: "17.0.13"
 
-      - name: Debug Java Version
-        run: |
-          echo "JAVA_HOME: $JAVA_HOME"
-          java -version
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
-        with:
-          cache-disabled: true # Disable remote cache due to 403 error
+        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
 
       - name: Prepare Hiero Solo
         id: solo
-        uses: hiero-ledger/hiero-solo-action@35efe2334bffb73298716402a5c688321ec29260 # v0.6
+        uses: hiero-ledger/hiero-solo-action@71219540ac7f578e6ea4fc3c17575c0295e56163 # v0.9
         with:
           installMirrorNode: true
-
-      - name: Debug Hiero Solo Outputs
-        run: |
-          echo "Solo Outputs:"
-          echo "accountId: ${{ steps.solo.outputs.accountId }}"
-          echo "privateKey: ${{ steps.solo.outputs.privateKey }}"
-          echo "publicKey: ${{ steps.solo.outputs.publicKey }}"
-          # Check if node and mirror node are running
-          echo "Checking node status..."
-          netstat -tuln | grep 50211 || echo "No process listening on port 50211"
-          curl -s http://localhost:5551/api/v1/network/nodes || echo "Mirror node not accessible"
+          hieroVersion: v0.62.3
 
       - name: Build SDK
         run: ./gradlew assemble
@@ -288,20 +250,15 @@ jobs:
 
       - name: Prepare .env for Examples
         run: |
-          echo "OPERATOR_KEY=${{ steps.solo.outputs.privateKey }}" > examples/.env
-          echo "OPERATOR_ID=${{ steps.solo.outputs.accountId }}" >> examples/.env
-          echo "HEDERA_NETWORK=solo" >> examples/.env
-          echo "HEDERA_NODE_ADDRESS=localhost:50211" >> examples/.env
-          echo "HEDERA_MIRROR_NODE_ADDRESS=localhost:5551" >> examples/.env
+          echo "OPERATOR_KEY=0xa608e2130a0a3cb34f86e757303c862bee353d9ab77ba4387ec084f881d420d4" > examples/.env
+          echo "OPERATOR_ID=0.0.1022" >> examples/.env
+          echo "HEDERA_NETWORK=localhost" >> examples/.env
 
       - name: Run Examples
-        env:
-          OPERATOR_ID: ${{ steps.solo.outputs.accountId }}
-          OPERATOR_KEY: ${{ steps.solo.outputs.privateKey }}
-          HEDERA_NETWORK: solo
-          HEDERA_NODE_ADDRESS: localhost:50211
-          HEDERA_MIRROR_NODE_ADDRESS: localhost:5551
         run: ./gradlew :examples:runAllExamples
+
+      - name: Stop the local node
+        run: npx @hashgraph/hedera-local stop
 
   test-tck:
     name: TCK Tests
@@ -310,7 +267,7 @@ jobs:
       - build
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: audit
 
@@ -330,42 +287,21 @@ jobs:
           distribution: temurin
           java-version: "17.0.13"
 
-      - name: Debug Java Version
-        run: |
-          echo "JAVA_HOME: $JAVA_HOME"
-          java -version
-
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
-        with:
-          cache-disabled: true # Disable remote cache due to 403 error
+        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
 
       - name: Prepare Hiero Solo
         id: solo
-        uses: hiero-ledger/hiero-solo-action@35efe2334bffb73298716402a5c688321ec29260 # v0.6
+        uses: hiero-ledger/hiero-solo-action@71219540ac7f578e6ea4fc3c17575c0295e56163 # v0.9
         with:
           installMirrorNode: true
-
-      - name: Debug Hiero Solo Outputs
-        run: |
-          echo "Solo Outputs:"
-          echo "accountId: ${{ steps.solo.outputs.accountId }}"
-          echo "privateKey: ${{ steps.solo.outputs.privateKey }}"
-          echo "publicKey: ${{ steps.solo.outputs.publicKey }}"
-          # Check if node and mirror node are running
-          echo "Checking node status..."
-          netstat -tuln | grep 50211 || echo "No process listening on port 50211"
-          curl -s http://localhost:5551/api/v1/network/nodes || echo "Mirror node not accessible"
+          hieroVersion: v0.62.3
 
       - name: Build TCK
-        run: ./grad Wlew assemble
+        run: ./gradlew assemble
 
       - name: Run TCK Unit Tests
-        env:
-          OPERATOR_ID: ${{ steps.solo.outputs.accountId }}
-          OPERATOR_KEY: ${{ steps.solo.outputs.privateKey }}
-          HEDERA_NETWORK: solo
-          HEDERA_NODE_ADDRESS: localhost:50211
-          HEDERA_MIRROR_NODE_ADDRESS: localhost:5551
-        run: ./gradlew -POPERATOR_ID=$OPERATOR_ID -POPERATOR_KEY=$OPERATOR_KEY -PHEDERA_NETWORK=$HEDERA_NETWORK -PHEDERA_NODE_ADDRESS=$HEDERA_NODE_ADDRESS -PHEDERA_MIRROR_NODE_ADDRESS=$HEDERA_MIRROR_NODE_ADDRESS :tck:test
+        run: ./gradlew :tck:test
 
+      - name: Stop the local node
+        run: npx @hashgraph/hedera-local stop
